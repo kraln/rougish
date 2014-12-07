@@ -1,6 +1,7 @@
 /* Variable to hold the screen and stuff */
 var scr = [[]]; /* the screen buffer */
 var world = [[]]; /* the world */
+var seen = [[]]; /* what you've seen */
 var world_x = 2000; /* World size... change me ! :) */
 var world_y = 1000; 
 var screen_x = 80; /* Screen size. Don't change me... */
@@ -16,15 +17,19 @@ var interactable = [];
 var game_won = false;
 
 /* Special characters */
-var block = '█';
+var full_block = '█';
+var dark_block = '▓';
+var medium_block = '▒';
+var light_block = '░';
 
 /* HTML handle */
 var handle = document.getElementById("playarea");
 
 var player = {
-  x: world_x/2,
-  y: world_y/2,
-  pos: { x: world_x/2, y: world_y/2 },
+  x: Math.floor(world_x/2),
+  y: Math.floor(world_y/2),
+  lr: 2, 
+  pos: { x: Math.floor(world_x/2), y: Math.floor(world_y/2) },
   inventory: [],
   moveUp: function() {
     if (world[player.x][player.y + 1] == ' ')
@@ -72,6 +77,11 @@ var player = {
             messages.push("Ooooooh!");
           }
           player.pickUp(thing);
+
+          if ("onPickup" in thing)
+          {
+            thing.onPickup();
+          }
           continue;
         } else {
           /* Can I interact with it? */
@@ -102,7 +112,7 @@ var player = {
   },
   draw: function()
   {
-    player.pos = draw_entity("@", player.x, player.y);
+    player.pos = draw_entity("@", player.x, player.y, true);
   }
 };
 
@@ -125,7 +135,12 @@ function end_turn()
   {
     entities[i].think(entities[i]);
   }
-  
+ 
+  /* update the seen register based on the player position */
+  for (var x = player.x - player.lr; x <= player.x + player.lr; x++)
+    for (var y = player.y - player.lr; y <= player.y + player.lr; y++)
+      seen[x][y] = true;
+
   /* Increment the turn counter */
   turn++; 
 }
@@ -170,7 +185,7 @@ function draw_messages()
 }
 
 /* Used by entities to figure out if they need to draw or not */
-function draw_entity(chr, x, y)
+function draw_entity(chr, x, y, glowing)
 {
   screen_minx = cam_x - (screen_x / 2); 
   screen_maxx = cam_x + (screen_x / 2) - 1;
@@ -182,6 +197,15 @@ function draw_entity(chr, x, y)
 
   if (y < screen_miny || y > screen_maxy)
     return { x: (x - screen_minx), y: (y - screen_miny) }
+  
+  if (!seen[x][y])
+  {
+    if (!glowing)
+      return;
+    else {
+      console.log(seen[x][y] + ", " + x + ", " + y);
+    }
+  }
 
   scr[x - screen_minx][y - screen_miny] = chr; 
   return { x: (x - screen_minx), y: (y - screen_miny) }
@@ -228,15 +252,49 @@ function check_empty(x1, y1, x2, y2)
     return false;
   }
 
-  if(x1 == x2 || y1 == y2)
+  /* flip bad input */
+  if (x1 > x2)
   {
-    return false;
+    var temp = x1;
+    x1 = x2;
+    x2 = temp;
   }
 
+  if (y1 > y2)
+  {
+    var temp = y1;
+    y1 = y2;
+    y2 = temp;
+  }
+
+  /* Straight lines */
+  if(x1 == x2)
+  {
+    for (var y = y1; y < y2; x++)
+      if (world[x1][y] < 255)
+      {
+        return false;
+      }
+      
+    return true;
+  }
+
+  if(y1 == y2)
+  {
+    for (var x = x1; x < x2; x++)
+      if (world[x][y1] < 255)
+      {
+        return false;
+      }
+      
+    return true;
+  }
+
+  /* normal case */
   for (var x = x1; x < x2; x++)
     for (var y = y1; y < y2; y++)
     {
-      if (world[x][y] != block)
+      if (world[x][y] < 255)
       {
         return false;
       }
@@ -266,6 +324,21 @@ function fill(x1, y1, x2, y2, chr)
     return false;
   }
 
+  /* flip bad input */
+  if (x1 > x2)
+  {
+    var temp = x1;
+    x1 = x2;
+    x2 = temp;
+  }
+
+  if (y1 > y2)
+  {
+    var temp = y1;
+    y1 = y2;
+    y2 = temp;
+  }
+
   /* Straight lines */
   if(x1 == x2)
   {
@@ -284,20 +357,6 @@ function fill(x1, y1, x2, y2, chr)
   }
 
   /* normal case */
-  if (x1 > x2)
-  {
-    var temp = x1;
-    x1 = x2;
-    x2 = temp;
-  }
-
-  if (y1 > y2)
-  {
-    var temp = y1;
-    y1 = y2;
-    y2 = temp;
-  }
-
   for (var x = x1; x < x2; x++)
     for (var y = y1; y < y2; y++)
     {
@@ -434,73 +493,77 @@ function init_world()
       if (y == 0)
       {
         world[x] = new Array();
+        seen[x] = new Array();
       }
-      world[x][y] = block;
+      world[x][y] = dark_block;
+      seen[x][y] = false;
     }
 
   /* Create start room */
   create_room(world_x/2, world_y/2, 20, 8);
 
   /* Create some rooms, bfs */
-  var cur_room;
-  var iter = 0;
-  var max_iter = 125;
-  var done_iter = 0;
+  max_iter = 125;
+  done_iter = 0;
+  
+  var iter_func = function() {
+    iter_create_room(rooms[0]);
 
-  while (iter < max_iter)
-  {
-    setTimeout(function() {
-      iter_create_room(rooms[0]);
-      world_to_canvas();
-      done_iter++;
-      if (done_iter == max_iter)
-      {
-        /* Recursively connect rooms */
-        connect_rooms(rooms[0]);
-        world_to_canvas();
-
-        /* Put exit in starting room */
-        var exit = item_spawn(rooms[0], item_exit);
-        exit.interact = function() {
-          var has_ladder = false;
-          for (var i = 0; i < player.inventory.length; i++)
+    world_to_canvas();
+   
+    done_iter++;
+    if (done_iter != max_iter)
+    {
+      setTimeout(iter_func, 0); 
+    } else {
+      /* Recursively connect rooms */
+      connect_rooms(rooms[0]);
+      
+      /* Put exit in starting room */
+      var exit = item_spawn(rooms[0], item_exit);
+      exit.interact = function() {
+        var has_ladder = false;
+        for (var i = 0; i < player.inventory.length; i++)
+        {
+          if (player.inventory[i].avatar == "L")
           {
-            if (player.inventory[i].avatar == "L")
-            {
-              has_ladder = true;
-              break;
-            }    
-          }
-          if (has_ladder) {
-            win_game();
-          } else {
-            messages.push("Come back when you've found the ladder...");
-          }
-        };
+            has_ladder = true;
+            break;
+          }    
+        }
+        if (has_ladder) {
+          win_game();
+        } else {
+          messages.push("Come back when you've found the ladder...");
+        }
+      };
 
+      /* Put flashlight nearby */
+      var flashlight = item_spawn(rooms[genRand(2,3)], item_flashlight);
+
+      flashlight.onPickup = function() {
+        player.lr += 3;
+      };
+
+      /* In last 50% of rooms */
+      /* Spawn goal items */
+      item_spawn(rooms[genRand(Math.floor(rooms.length/2),rooms.length)], item_ladder);
+      /* Spawn bosses */
+
+      /* Everywhere */
+      /* Spawn regular enemies */
+      /* Spawn regular items */
         
-        /* Put flashlight nearby */
-        item_spawn(rooms[genRand(2,3)], item_flashlight);
-
-        /* In last 50% of rooms */
-        /* Spawn goal items */
-        item_spawn(rooms[genRand(Math.floor(rooms.length/2),rooms.length)], item_ladder);
-        /* Spawn bosses */
-
-        /* Everywhere */
-        /* Spawn regular enemies */
-        /* Spawn regular items */
+      world_to_canvas();
         
-        world_to_canvas();
-        
-        messages.push("Welcome to Rougish. It's your thirteenth birthday, and by the rules of thevillage you must undergo several screenings before you're allowed to join society as an adult. You've already aced the written and verbal screeningsThere's just the small matter of the game screening. A man yells at you:  Come back when you've cleared the entire game... You'll need a ladder, andyou'll need a flashlight. Hope to god grumpus doesn't find you. Good luck!");
+      messages.push("Welcome to Rougish. It's your thirteenth birthday, and by the rules of thevillage you must undergo several screenings before you're allowed to join society as an adult. You've already aced the written and verbal screeningsThere's just the small matter of the game screening. A man yells at you:  Come back when you've cleared the entire game... You'll need a ladder, andyou'll need a flashlight. Hope to god grumpus doesn't find you. Good luck!");
 
-        refresh();
+      refresh();
 
-      }
-    }, 1);
-    iter++;
-  }
+    }
+  };
+
+  setTimeout(iter_func, 0);
   console.log("Exited INIT_WORLD");
 }
 
@@ -552,7 +615,20 @@ function copy_world_to_screen(x,y)
   for (dy = screen_y - 1; dy >= 0; dy--)
     for (dx = screen_x - 1; dx >= 0; dx--)
     {
-      scr[dx][dy] = world[x + dx][y + dy];
+      if (Math.abs((x+dx) - player.x) <= player.lr && Math.abs((y+dy) - player.y) <= player.lr)
+      {
+        /* directly observable */
+        scr[dx][dy] = world[x + dx][y + dy];
+      } else {
+        if (seen[x+dx][y+dy])
+        {
+          /* saw it */
+          scr[dx][dy] = (world[x + dx][y + dy] == dark_block?dark_block:medium_block);
+        } else {
+          /* haven't seen it */
+          scr[dx][dy] = full_block;
+        } 
+      }
     }
 
   console.log("Exited COPY_WORLD_TO_SCREEN");
@@ -575,6 +651,13 @@ function setPixel(imageData, x, y, r, g, b, a) {
 
 function world_to_canvas()
 {
+  /* IE10 is really slow at Canvas... */
+  if ("ActiveXObject" in window)
+  {
+    return;
+  }
+
+  console.log("Entered WORLD_TO_CANVAS");
   c = document.getElementById("world_map").getContext("2d");
   i = c.createImageData(world_x, world_y);
   for (var x = 0; x < world_x; x++)
@@ -583,7 +666,7 @@ function world_to_canvas()
       if(world[x][y] == ' ')
       {
         setPixel(i, x, y, 255, 255, 255, 255);
-      } else if (world[x][y] == block) {
+      } else if (world[x][y] == dark_block) {
         setPixel(i, x, y, 10, 10, 10, 255);
       } else {
         setPixel(i, x, y, 250, 10, 10, 255);

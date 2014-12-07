@@ -11,6 +11,7 @@ var item_flashlight = {
   movable: false,
   havable: true,
   legendary: true,
+  glowing: true,
 };
 
 var item_ladder = {
@@ -47,7 +48,7 @@ var genRand = function(x, y) {};
 
 function item_draw(item)
 {
-  draw_entity(item.avatar, item.x, item.y);
+  draw_entity(item.avatar, item.x, item.y, ("glowing" in item));
 }
 
 function item_spawn(room, item)
