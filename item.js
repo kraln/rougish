@@ -55,18 +55,16 @@ var genRand = function(x, y) {};
 
 function item_draw(item)
 {
-  draw_entity(item.avatar, item.x, item.y, ("glowing" in item));
+  draw_entity(item.avatar, item.x, item.y, ("glowing" in item), item.movable);
 }
 
 function item_spawn(room, item)
 {
-  /* add the item to the list of tracked entities */
-
   /* First clone */
   /* XXX: Erases all functions */
   var i = JSON.parse(JSON.stringify(item)); 
 
-  /* all items think and draw the same way */
+  /* most items think and draw the same way */
   i.draw = item_draw;
   i.think = item_think;
   i.type = "item";

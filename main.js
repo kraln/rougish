@@ -1,21 +1,24 @@
 /* Variable to hold the screen and stuff */
+world = [[]]; /* the world */
+seen = [[]]; /* what you've seen */
+rooms = []; /* track room centers */
+entities = []; /* track things */
+messages = []; /* stack of messages to display */
+turn = 0; /* what turn is it? */
+
 var scr = [[]]; /* the screen buffer */
-var world = [[]]; /* the world */
-var seen = [[]]; /* what you've seen */
 var world_x = 2000; /* World size... change me ! :) */
 var world_y = 1000; 
 var screen_x = 80; /* Screen size. Don't change me... */
 var screen_y = 24;
-var cam_x = world_x/2; /* The "camera" position */
-var cam_y = world_y/2; 
-var rooms = []; /* track room centers */
-var entities = []; /* track things */
-var turn = 0;
-var messages = [];
-var blocked_on_message = false;
-var interactable = [];
+var cam_x = Math.floor(world_x/2); /* The "camera" position */
+var cam_y = Math.floor(world_y/2); 
+var blocked_on_message = false; /* ignore input other than enter because blocked on a message */
+var interactable = []; /* list of things the player can do on this block */
+var max_iter = 25; /* how many iterations of dungeon generation to do (minimum 3)*/
 var game_won = false;
-var max_iter = 25;
+var game_lost = false;
+var last_move = {x:0, y:0}; /* the last move the player made */
 
 /* Special characters */
 var full_block = '█';
@@ -31,28 +34,30 @@ var player = {
   y: Math.floor(world_y/2),
   health: 100,
   armor: 0,
-  lr: 2, 
+  lr: 2,
+  dmg: 3,
+  reach: 2,
   pos: { x: Math.floor(world_x/2), y: Math.floor(world_y/2) },
   inventory: [],
   moveUp: function() {
     if (world[player.x][player.y + 1] == ' ')
-      player.y++;   
-      end_turn(); 
+      player.y++; 
+      end_turn({x:0,y:1}); 
   },
   moveDown: function() {
     if (world[player.x][player.y - 1] == ' ')
       player.y--;
-      end_turn(); 
+      end_turn({x:0,y:-1}); 
   },
   moveLeft: function() {
     if (world[player.x + 1][player.y] == ' ')
       player.x++;
-      end_turn(); 
+      end_turn({x:1,y:0}); 
   },
   moveRight: function() {
     if (world[player.x - 1][player.y] == ' ')
       player.x--;  
-      end_turn(); 
+      end_turn({x:-1,y:0}); 
   },
   equip: function() {
     messages.push("I don't know how to do that yet.");
@@ -75,14 +80,55 @@ var player = {
       messages.push("Here's your " + item.description + ".");
     };
     entities.push(i);
-    end_turn();
+    end_turn({x:0,y:0});
   },
   pickUp: function(thing) {
     player.inventory.push(thing);
     
     interactable.splice(interactable.indexOf(thing), 1);
     entities.splice(entities.indexOf(thing), 1);
-    end_turn();
+    end_turn({x:0,y:0});
+  },
+  takeDamage: function(source, amount) {
+    console.log("Player taking " + amount + " damage (remaining health: " + player.health + ")");
+    var damage = amount - player.armor;
+    if (damage > 0) 
+    {
+      player.health -= damage;
+    }
+
+    if (player.health <= 0)
+    {
+      player.die();
+    }
+  },
+  die: function() {
+    lose_game(); 
+  },
+  attack: function() {
+    /* this is really painful -- consider optimizing somehow */
+    var hit = false;
+    for (var i = 0; i < entities.length; i++)
+    {
+      if (entities[i].type == "enemy" && Math.abs(entities[i].x - player.x) <= player.reach && Math.abs(entities[i].y - player.y) <= player.reach)
+      {
+        hit = true;
+        /* TODO: message depends on equipped weapon */
+        messages.push("You manage to damage the " + entities[i].description + "!");
+        entities[i].takeDamage(entities[i], player, genRand(1,3) + player.dmg);
+      }
+    }
+
+    if (!hit) {
+      if (genRand(1,20) < 19) {
+        messages.push("You flail a bit, but it doesn't accomplish much.");
+      } else {
+        messages.push("You flail a bit, and manage to hurt yourself. Hah!");
+        player.takeDamage(player, genRand(3,5));
+      }
+    }
+
+    end_turn({x:0,y:0});
   },
   interact: function() {
     /* if nothing, then nothing */
@@ -142,9 +188,16 @@ var player = {
   },
   draw: function()
   {
-    player.pos = draw_entity("@", player.x, player.y, true);
+    player.pos = draw_entity("@", player.x, player.y, true, false);
   }
 };
+
+/* lose the game! */
+function lose_game() {
+  alert("You have died.\n\nTurns: " + turn);
+  game_lost = true;
+  messages.unshift("Do you want your possessions identified? (Reload to replay!)");
+}
 
 /* win the game! */
 function win_game()
@@ -155,8 +208,11 @@ function win_game()
 }
 
 /* give the other entities a chance to think */
-function end_turn()
+function end_turn(last_action)
 {
+  /* just in case we need to back out */
+  last_move = last_action;
+
   /* clear the list of interactable things */
   interactable = [];
 
@@ -215,7 +271,7 @@ function draw_messages()
 }
 
 /* Used by entities to figure out if they need to draw or not */
-function draw_entity(chr, x, y, glowing)
+function draw_entity(chr, x, y, glowing, movable)
 {
   screen_minx = cam_x - (screen_x / 2); 
   screen_maxx = cam_x + (screen_x / 2) - 1;
@@ -227,17 +283,17 @@ function draw_entity(chr, x, y, glowing)
 
   if (y < screen_miny || y > screen_maxy)
     return { x: (x - screen_minx), y: (y - screen_miny) }
-  
+ 
+  /* Draw glowing things even if they haven't been seen */ 
   if (!seen[x][y])
   {
     if (!glowing)
       return;
-    else {
-      console.log(seen[x][y] + ", " + x + ", " + y);
-    }
   }
-
-  scr[x - screen_minx][y - screen_miny] = chr; 
+  
+  /* Only draw things that are within the light field, or things that don't move that have been seen */
+  if (!movable || (Math.abs(x - player.x) <= player.lr && Math.abs(y - player.y) <= player.lr))
+    scr[x - screen_minx][y - screen_miny] = chr;
   return { x: (x - screen_minx), y: (y - screen_miny) }
 }
 
@@ -580,8 +636,17 @@ function init_world()
       /* Spawn bosses */
 
       /* Everywhere */
-      /* Spawn regular enemies */
-      /* Spawn regular items */
+      for (var i = 0; i < rooms.length; i++)
+      {
+        var act = genRand(1,100);
+       
+        /* Spawn regular enemies */
+        if (act > 20) {
+          enemy_spawn(rooms[i], enemies.indexOf(enemy_bat));
+        }
+
+        /* Spawn regular items */
+      }
         
       world_to_canvas();
         
@@ -737,16 +802,17 @@ function refresh()
 document.onkeydown = checkKey;
 
 function messageHelp() {
-  messages.push("Leave a breadcrumb: b ");
-  messages.push("Inventory: i ");
-  messages.push("Interaction: . ");
+
+  messages.push("Leave a breadcrumb: b | Check status: s");
+  messages.push("Inventory: i | Equip: e");
+  messages.push("Interaction: . | Attack: a");
   messages.push("Movement: Arrow keys or HJKL ");
 }
 
 function checkKey(e) {
   e = e || window.event;
 
-  if (game_won == true)
+  if (game_won == true || game_lost == true)
     return;
 
   if (blocked_on_message == true && e.keyCode == '13')
@@ -774,6 +840,8 @@ function checkKey(e) {
     messageHelp();
   } else if (e.keyCode == '83') { /* s */
     player.printStatus();
+  } else if (e.keyCode == '65') { /* a */
+    player.attack();
   } else if (e.keyCode == '69') { /* e */
     player.equip();
   } else {
