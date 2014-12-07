@@ -1,11 +1,11 @@
-var item_exit = {
+item_exit = {
   avatar: ">",
   description: "the exit. Do you have everything?",
   movable: false,
   havable: false,
 };
 
-var item_flashlight = {
+item_flashlight = {
   avatar: "F",
   description: "bright flashlight",
   movable: false,
@@ -14,12 +14,19 @@ var item_flashlight = {
   glowing: true,
 };
 
-var item_ladder = {
+item_ladder = {
   avatar: "L",
   description: "wooden ladder",
   movable: false,
   havable: true,
   legendary: true,
+};
+
+item_breadcrumb = {
+  avatar: ".",
+  description: "a breadcrumb from turn ",
+  movable: false,
+  havable: false,
 };
 
 function item_collide(item)

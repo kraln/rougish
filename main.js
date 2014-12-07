@@ -15,6 +15,7 @@ var messages = [];
 var blocked_on_message = false;
 var interactable = [];
 var game_won = false;
+var max_iter = 25;
 
 /* Special characters */
 var full_block = '█';
@@ -28,6 +29,8 @@ var handle = document.getElementById("playarea");
 var player = {
   x: Math.floor(world_x/2),
   y: Math.floor(world_y/2),
+  health: 100,
+  armor: 0,
   lr: 2, 
   pos: { x: Math.floor(world_x/2), y: Math.floor(world_y/2) },
   inventory: [],
@@ -51,11 +54,35 @@ var player = {
       player.x--;  
       end_turn(); 
   },
+  equip: function() {
+    messages.push("I don't know how to do that yet.");
+  },
+  breadcrumb: function() {
+    /* Special because of how it interacts */
+    var i = JSON.parse(JSON.stringify(item_breadcrumb));
+    i.draw = item_draw;
+    i.think = function (item) {
+      if (item.x == player.x && item.y == player.y)
+      {
+        interactable.push(item);
+      }
+    };
+    i.x = player.x;
+    i.description += turn;
+    i.y = player.y;
+    i.type = "item";
+    i.interact = function (item) {
+      messages.push("Here's your " + item.description + ".");
+    };
+    entities.push(i);
+    end_turn();
+  },
   pickUp: function(thing) {
     player.inventory.push(thing);
     
     interactable.splice(interactable.indexOf(thing), 1);
     entities.splice(entities.indexOf(thing), 1);
+    end_turn();
   },
   interact: function() {
     /* if nothing, then nothing */
@@ -87,7 +114,7 @@ var player = {
           /* Can I interact with it? */
           if (thing.interact)
           {
-            thing.interact();
+            thing.interact(thing);
           } else {
             messages.push("You can't play with the " + thing.description + ".");
           }
@@ -97,6 +124,9 @@ var player = {
 
     }
     
+  },
+  printStatus: function() {
+    messages.push("You evaluate yourself. Health: " + player.health + ", Armor: " + player.armor + ", Light: " + player.lr);
   },
   printInventory: function()
   {
@@ -503,8 +533,7 @@ function init_world()
   create_room(world_x/2, world_y/2, 20, 8);
 
   /* Create some rooms, bfs */
-  max_iter = 125;
-  done_iter = 0;
+  var done_iter = 0;
   
   var iter_func = function() {
     iter_create_room(rooms[0]);
@@ -623,7 +652,7 @@ function copy_world_to_screen(x,y)
         if (seen[x+dx][y+dy])
         {
           /* saw it */
-          scr[dx][dy] = (world[x + dx][y + dy] == dark_block?dark_block:medium_block);
+          scr[dx][dy] = (world[x + dx][y + dy] == dark_block?full_block:medium_block);
         } else {
           /* haven't seen it */
           scr[dx][dy] = full_block;
@@ -707,6 +736,13 @@ function refresh()
 /* bind the input handler */
 document.onkeydown = checkKey;
 
+function messageHelp() {
+  messages.push("Leave a breadcrumb: b ");
+  messages.push("Inventory: i ");
+  messages.push("Interaction: . ");
+  messages.push("Movement: Arrow keys or HJKL ");
+}
+
 function checkKey(e) {
   e = e || window.event;
 
@@ -732,6 +768,14 @@ function checkKey(e) {
     player.printInventory();
   } else if (e.keyCode == '190') { /* . */
     player.interact();
+  } else if (e.keyCode == '66') { /* b */
+    player.breadcrumb();
+  } else if (e.keyCode == '191') { /* ? */
+    messageHelp();
+  } else if (e.keyCode == '83') { /* s */
+    player.printStatus();
+  } else if (e.keyCode == '69') { /* e */
+    player.equip();
   } else {
     console.log(e.keyCode);
   }
