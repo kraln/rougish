@@ -444,53 +444,63 @@ function init_world()
   /* Create some rooms, bfs */
   var cur_room;
   var iter = 0;
+  var max_iter = 125;
+  var done_iter = 0;
 
-  while (iter < 125)
+  while (iter < max_iter)
   {
-    cur_room = rooms[0];
-    iter_create_room(cur_room);
+    setTimeout(function() {
+      iter_create_room(rooms[0]);
+      world_to_canvas();
+      done_iter++;
+      if (done_iter == max_iter)
+      {
+        /* Recursively connect rooms */
+        connect_rooms(rooms[0]);
+        world_to_canvas();
+
+        /* Put exit in starting room */
+        var exit = item_spawn(rooms[0], item_exit);
+        exit.interact = function() {
+          var has_ladder = false;
+          for (var i = 0; i < player.inventory.length; i++)
+          {
+            if (player.inventory[i].avatar == "L")
+            {
+              has_ladder = true;
+              break;
+            }    
+          }
+          if (has_ladder) {
+            win_game();
+          } else {
+            messages.push("Come back when you've found the ladder...");
+          }
+        };
+
+        
+        /* Put flashlight nearby */
+        item_spawn(rooms[genRand(2,3)], item_flashlight);
+
+        /* In last 50% of rooms */
+        /* Spawn goal items */
+        item_spawn(rooms[genRand(Math.floor(rooms.length/2),rooms.length)], item_ladder);
+        /* Spawn bosses */
+
+        /* Everywhere */
+        /* Spawn regular enemies */
+        /* Spawn regular items */
+        
+        world_to_canvas();
+        
+        messages.push("Welcome to Rougish. It's your thirteenth birthday, and by the rules of thevillage you must undergo several screenings before you're allowed to join society as an adult. You've already aced the written and verbal screeningsThere's just the small matter of the game screening. A man yells at you:  Come back when you've cleared the entire game... You'll need a ladder, andyou'll need a flashlight. Hope to god grumpus doesn't find you. Good luck!");
+
+        refresh();
+
+      }
+    }, 1);
     iter++;
   }
-
-  /* Recursively connect rooms */
-  connect_rooms(cur_room);
-
-  /* Put exit in starting room */
-  var exit = item_spawn(rooms[0], item_exit);
-  exit.interact = function() {
-    var has_ladder = false;
-    for (var i = 0; i < player.inventory.length; i++)
-    {
-      if (player.inventory[i].avatar == "L")
-      {
-        has_ladder = true;
-        break;
-      }    
-    }
-    if (has_ladder) {
-      win_game();
-    } else {
-      messages.push("Come back when you've found the ladder...");
-    }
-  };
-
-  
-  /* Put flashlight nearby */
-  item_spawn(rooms[genRand(2,3)], item_flashlight);
-
-  /* In last 50% of rooms */
-  /* Spawn goal items */
-  item_spawn(rooms[genRand(Math.floor(rooms.length/2),rooms.length)], item_ladder);
-  /* Spawn bosses */
-
-  /* Everywhere */
-  /* Spawn regular enemies */
-  /* Spawn regular items */
-  
-  world_to_canvas();
-  
-  messages.push("Welcome to Rougish. It's your thirteenth birthday, and by the rules of thevillage you must undergo several screenings before you're allowed to join society as an adult. You've already aced the written and verbal screeningsThere's just the small matter of the game screening. A man yells at you:  Come back when you've cleared the entire game... You'll need a ladder, andyou'll need a flashlight. Hope to god grumpus doesn't find you. Good luck!");
-
   console.log("Exited INIT_WORLD");
 }
 
@@ -646,8 +656,5 @@ function checkKey(e) {
   refresh();
 }
 
-
 init_screen();
 init_world();
-
-refresh();

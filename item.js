@@ -64,8 +64,8 @@ function item_spawn(room, item)
   i.type = "item";
 
   /* put item into room */
-  i.x = room.x - (room.w/2) + genRand(1, room.w-2);
-  i.y = room.y - (room.h/2) + genRand(1, room.h-2);
+  i.x = Math.floor(room.x - (room.w/2) + genRand(1, room.w-2));
+  i.y = Math.floor(room.y - (room.h/2) + genRand(1, room.h-2));
   
   /* give the item a reference to the room */
   i.r = room;
