@@ -694,7 +694,7 @@ function init_world()
       world_to_canvas();
        
       messages.push("It's your thirteenth birthday, and by the rules of the village you must   undergo several screenings before you're allowed to join society as an    adult. You've already aced the written and verbal screenings. There's justthe small matter of the game screening. A man yells at you: Come back whenyou've cleared the entire game... You'll need a ladder, and you'll need a flashlight. Hope to god Grumpus doesn't find you. Good luck!");
-      messages.push("Welcome to Rougish. Press space or enter to continue. H for help.");
+      messages.push("Welcome to Rougish. Press space or enter to continue. ? for help.");
       refresh();
 
     }
