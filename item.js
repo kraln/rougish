@@ -1,6 +1,6 @@
 item_exit = {
   avatar: ">",
-  description: "the exit. Do you have everything?",
+  description: "the exit. Do you have everything you need first?",
   movable: false,
   havable: false,
 };
@@ -29,6 +29,15 @@ item_breadcrumb = {
   havable: false,
 };
 
+item_cookie = {
+  avatar: "c",
+  description: "delicious oatmeal cookie",
+  comestable: true,
+  havable: true,
+  movable: false,
+  restorative: 5
+};
+
 function item_collide(item)
 {
   if (item.havable) 
@@ -50,6 +59,14 @@ function item_think(item)
   } 
 }
 
+function edible_item_use(item)
+{
+  if (item.comestable) {
+    player.health += item.restorative;
+    messages.push("The " + item.description + " really hit the spot!");
+  }
+}
+
 var draw_entity = function() {};
 var genRand = function(x, y) {};
 
@@ -60,6 +77,19 @@ function item_draw(item)
 
 function item_spawn(room, item)
 {
+  /* put item into room */
+  var x = Math.floor(room.x - (room.w/2) + genRand(1, room.w-2));
+  var y = Math.floor(room.y - (room.h/2) + genRand(1, room.h-2));
+  var i = item_spawn_at(x, y, item);
+  /* give the item a reference to the room */
+  i.r = room;
+  /* Let the room know it has this item */
+  room.i.push(i);
+  return i;
+}
+
+function item_spawn_at(x, y, item)
+{
   /* First clone */
   /* XXX: Erases all functions */
   var i = JSON.parse(JSON.stringify(item)); 
@@ -69,20 +99,14 @@ function item_spawn(room, item)
   i.think = item_think;
   i.type = "item";
 
-  /* put item into room */
-  i.x = Math.floor(room.x - (room.w/2) + genRand(1, room.w-2));
-  i.y = Math.floor(room.y - (room.h/2) + genRand(1, room.h-2));
-  
-  /* give the item a reference to the room */
-  i.r = room;
-
-  /* Let the room know it has this item */
-  room.i.push(i);
-
+  /* properly locate the item */
+  i.x = x;
+  i.y = y;
+ 
   /* Push the item into the entity pool */
   entities.push(i);
 
   return i;
-}
 
+}
 

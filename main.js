@@ -15,9 +15,10 @@ var cam_x = Math.floor(world_x/2); /* The "camera" position */
 var cam_y = Math.floor(world_y/2); 
 var blocked_on_message = false; /* ignore input other than enter because blocked on a message */
 var interactable = []; /* list of things the player can do on this block */
-var max_iter = 25; /* how many iterations of dungeon generation to do (minimum 3)*/
+var max_iter = 45; /* how many iterations of dungeon generation to do (minimum 3)*/
 var game_won = false;
 var game_lost = false;
+var use_mode = false;
 var last_move = {x:0, y:0}; /* the last move the player made */
 
 /* Special characters */
@@ -59,8 +60,31 @@ var player = {
       player.x--;  
       end_turn({x:-1,y:0}); 
   },
-  equip: function() {
-    messages.push("I don't know how to do that yet.");
+  use: function() {
+    var msg = "What would you like to use? ";
+    for (var i = 0; i < player.inventory.length; i++)
+    {
+      msg = msg + player.inventory[i].avatar;
+    }
+    messages.push(msg);
+    use_mode = true;
+  },
+  try_use: function(what) {
+    for (var i = 0; i < player.inventory.length; i++)
+    {
+      if (player.inventory[i].avatar == what)
+      {
+        if ("use" in player.inventory[i])
+        {
+          player.inventory[i].use(player.inventory[i]);
+          player.inventory.splice(i, 1);
+        } else {
+          messages.push("You can't use the " + player.inventory[i].description + ".");
+        }
+        return;
+      }
+    }
+    messages.push("Uh, I'm not sure you have one of those");
   },
   breadcrumb: function() {
     /* Special because of how it interacts */
@@ -630,10 +654,11 @@ function init_world()
         player.lr += 3;
       };
 
-      /* In last 50% of rooms */
-      /* Spawn goal items */
+      /* Spawn goal items (last 50% of rooms)*/
       item_spawn(rooms[genRand(Math.floor(rooms.length/2),rooms.length)], item_ladder);
+
       /* Spawn bosses */
+      enemy_spawn(rooms[rooms.length-1], enemies.indexOf(enemy_grumpus));
 
       /* Everywhere */
       for (var i = 0; i < rooms.length; i++)
@@ -646,6 +671,10 @@ function init_world()
         }
 
         /* Spawn regular items */
+        if (act > 80) {
+          var i = item_spawn(rooms[i], item_cookie);
+          i.use = edible_item_use;
+        }
       }
         
       world_to_canvas();
@@ -745,6 +774,9 @@ function setPixel(imageData, x, y, r, g, b, a) {
 
 function world_to_canvas()
 {
+  /* disabled */
+  return;
+
   /* IE10 is really slow at Canvas... */
   if ("ActiveXObject" in window)
   {
@@ -802,10 +834,9 @@ function refresh()
 document.onkeydown = checkKey;
 
 function messageHelp() {
-
-  messages.push("Leave a breadcrumb: b | Check status: s");
-  messages.push("Inventory: i | Equip: e");
-  messages.push("Interaction: . | Attack: a");
+  messages.push("Leave a breadcrumb: b | Check status: s ");
+  messages.push("Inventory: i | Use: u ");
+  messages.push("Interaction: . | Attack: a ");
   messages.push("Movement: Arrow keys or HJKL ");
 }
 
@@ -814,6 +845,21 @@ function checkKey(e) {
 
   if (game_won == true || game_lost == true)
     return;
+
+  if (e.keyCode == '16') return true; /* eat shifts */
+
+  if (use_mode)
+  {
+    var chr = String.fromCharCode(e.keyCode);
+    if (!e.shiftKey)
+    {
+      chr = chr.toLowerCase();
+    }
+    player.try_use(chr);
+    refresh();
+    use_mode = false;
+    return;
+  }
 
   if (blocked_on_message == true && e.keyCode == '13')
   {
@@ -842,8 +888,8 @@ function checkKey(e) {
     player.printStatus();
   } else if (e.keyCode == '65') { /* a */
     player.attack();
-  } else if (e.keyCode == '69') { /* e */
-    player.equip();
+  } else if (e.keyCode == '85') { /* u */
+    player.use();
   } else {
     console.log(e.keyCode);
   }
