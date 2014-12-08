@@ -678,9 +678,9 @@ function init_world()
         var act = genRand(1,100);
        
         /* Spawn regular enemies */
-        if (act < 40) {
+        if (act < 60) {
           enemy_spawn(rooms[i], enemies.indexOf(enemy_bat));
-        } else if (act < 50) {
+        } else if (act < 75) {
           enemy_spawn(rooms[i], enemies.indexOf(enemy_kobold));
         }
 
