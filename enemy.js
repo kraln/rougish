@@ -169,7 +169,90 @@ enemy_grumpus = {
   }
 };
 
-enemies = [enemy_bat,enemy_grumpus,];
+enemy_kobold = {
+  avatar: "k",
+  description: "devious kobold",
+  health: 45,
+  range: 2,
+  enemy_draw: base_enemy_draw,
+  attack: function(enemy) {
+    var outcome = genRand(1,10);
+    if (outcome < 4)
+    {
+      messages.push("The " + enemy.description + " bites!");
+      player.takeDamage(enemy, outcome);
+      return;
+    } else {
+      messages.push("The " + enemy.description + " tries to bite, but misses.");
+    }
+  },
+
+  enemy_think: function(enemy) {
+    var try_x = 0;
+    var try_y = 0;
+
+    if (enemy.x == player.x && enemy.y == player.y) {
+      /* try to move one step away */
+      try_x = genRand(0,2) - 1;
+      try_y = genRand(0,2) - 1;
+      if (try_x == try_y == 0)
+      {
+        try_x = 1; /* randomly selected! */
+      }
+    } else if (Math.abs(enemy.x - player.x) <= (player.lr*2) && Math.abs(enemy.y - player.y) <= (player.lr*2)) {
+      /* if within light radius of player, move towards player */
+      if (enemy.x > player.x) {
+        try_x = -1;
+      } else if (enemy.x < player.x) {
+        try_x = 1;
+      } 
+      if (enemy.y > player.y) {
+        try_y = -1;
+      } else if (enemy.y < player.y) {
+        try_y = 1;
+      } 
+    } else {
+      /* wander aimlessly */
+      try_x = genRand(0,2) - 1;
+      try_y = genRand(0,2) - 1;
+    }
+ 
+    /* move something like 50% of the time */ 
+    if (world[enemy.x + try_x][enemy.y + try_y] < 255 && (genRand(1,10) < 6))
+    {
+      enemy.x += try_x;
+      enemy.y += try_y;
+    }
+
+    if (Math.abs(enemy.x - player.x) <= enemy.range && Math.abs(enemy.y - player.y) <= enemy.range) {
+      enemy.attack(enemy);
+    }
+  },
+  takeDamage: function(enemy, source, amount){
+    console.log("Enemy taking " + amount + " damage (health: " + enemy.health + ")");
+    enemy.health -= amount;
+    if (enemy.health <= 0)
+    {
+      enemy.die(enemy);
+    }
+  },
+  die: function(enemy) {
+    messages.unshift("The " + enemy.description + " melts into a puddle.");
+
+    /* remove self from entities list */
+    entities.splice(entities.indexOf(enemy), 1);
+    
+    /* maybe drop an item? */
+    if (genRand(1,10) > 7) 
+    {
+      var i = item_spawn_at(enemy.x, enemy.y, item_cookie);
+      i.use = edible_item_use;
+    }
+  }
+};
+
+
+enemies = [enemy_bat,enemy_grumpus,enemy_kobold];
 
 function base_enemy_draw(enemy)
 {

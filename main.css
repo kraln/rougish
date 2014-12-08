@@ -52,11 +52,11 @@ div#playarea
 {
   background: #eee;
   border: 1px solid #ddd;
-  font-family: Fixed, monospace;
+  font-family: monospace, fixed, courier;
+  -webkit-font-smoothing: none;
   font-size: 1em;
   width: 80ch;
   height: 24em;
-  word-wrap: break-word;
   white-space: pre;
   margin: auto;
   position: absolute;

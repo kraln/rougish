@@ -678,8 +678,10 @@ function init_world()
         var act = genRand(1,100);
        
         /* Spawn regular enemies */
-        if (act > 20) {
+        if (act < 40) {
           enemy_spawn(rooms[i], enemies.indexOf(enemy_bat));
+        } else if (act < 50) {
+          enemy_spawn(rooms[i], enemies.indexOf(enemy_kobold));
         }
 
         /* Spawn regular items */
@@ -709,10 +711,13 @@ function draw_screen()
 
   /* Draw each character */
   for (y = screen_y-1; y >= 0; y--)
+  {
     for (x = screen_x-1; x >= 0; x--)
     {
       holder = holder + scr[x][y];
     }
+    holder = holder + "<br />";
+  }
 
   handle.innerHTML = holder;
 }
