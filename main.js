@@ -38,6 +38,10 @@ var player = {
   lr: 2,
   dmg: 3,
   reach: 2,
+  base_health: 100,
+  base_armor: 0,
+  base_dmg: 3,
+  base_reach: 3,
   pos: { x: Math.floor(world_x/2), y: Math.floor(world_y/2) },
   inventory: [],
   moveUp: function() {
@@ -656,6 +660,14 @@ function init_world()
 
       /* Spawn goal items (last 50% of rooms)*/
       item_spawn(rooms[genRand(Math.floor(rooms.length/2),rooms.length)], item_ladder);
+
+      /* Spawn a stick */
+      var i = item_spawn(rooms[genRand(Math.floor(rooms.length/4),Math.floor(rooms.length/2))], item_stick);
+      i.use = item_weapon_use;
+
+      /* Spawn a shield */  
+      i = item_spawn(rooms[genRand(Math.floor(rooms.length/4),Math.floor(rooms.length/2))], item_shield);
+      i.use = item_armor_use;
 
       /* Spawn bosses */
       enemy_spawn(rooms[rooms.length-1], enemies.indexOf(enemy_grumpus));
