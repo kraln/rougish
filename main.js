@@ -902,7 +902,7 @@ function checkKey(e) {
     player.interact();
   } else if (e.keyCode == '66') { /* b */
     player.breadcrumb();
-  } else if (e.keyCode == '191') { /* ? */
+  } else if (e.keyCode == '191' || e.keyCode == '219') { /* ? */
     messageHelp();
   } else if (e.keyCode == '83') { /* s */
     player.printStatus();
