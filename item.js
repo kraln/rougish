@@ -116,6 +116,7 @@ function item_draw(item)
 
 function item_spawn(room, item)
 {
+  console.log("Spawning item: " + item.description);
   /* put item into room */
   var x = Math.floor(room.x - (room.w/2) + genRand(1, room.w-2));
   var y = Math.floor(room.y - (room.h/2) + genRand(1, room.h-2));

@@ -617,7 +617,7 @@ function init_world()
   create_room(world_x/2, world_y/2, 20, 8);
 
   /* Create some rooms, bfs */
-  var done_iter = 0;
+  done_iter = 0;
   
   var iter_func = function() {
     iter_create_room(rooms[0]);
@@ -625,7 +625,7 @@ function init_world()
     world_to_canvas();
    
     done_iter++;
-    if (done_iter != max_iter)
+    if (done_iter < max_iter)
     {
       setTimeout(iter_func, 0); 
     } else {
@@ -673,20 +673,23 @@ function init_world()
       enemy_spawn(rooms[rooms.length-1], enemies.indexOf(enemy_grumpus));
 
       /* Everywhere */
-      for (var i = 0; i < rooms.length; i++)
+      console.log("rooms: " + rooms.length);
+      for (var z = 0; z < rooms.length; z++)
       {
         var act = genRand(1,100);
-       
+        console.log(act); 
         /* Spawn regular enemies */
-        if (act < 60) {
-          enemy_spawn(rooms[i], enemies.indexOf(enemy_bat));
-        } else if (act < 75) {
-          enemy_spawn(rooms[i], enemies.indexOf(enemy_kobold));
+        if (act < 30) {
+          enemy_spawn(rooms[z], enemies.indexOf(enemy_bat));
+        }
+       
+        if (act > 25 && act < 35) {
+          enemy_spawn(rooms[z], enemies.indexOf(enemy_kobold));
         }
 
         /* Spawn regular items */
-        if (act > 80) {
-          var i = item_spawn(rooms[i], item_cookie);
+        if (act > 32 && act < 40) {
+          var i = item_spawn(rooms[z], item_cookie);
           i.use = edible_item_use;
         }
       }
