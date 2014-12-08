@@ -692,9 +692,9 @@ function init_world()
       }
         
       world_to_canvas();
-        
-      messages.push("Welcome to Rougish. It's your thirteenth birthday, and by the rules of thevillage you must undergo several screenings before you're allowed to join society as an adult. You've already aced the written and verbal screeningsThere's just the small matter of the game screening. A man yells at you:  Come back when you've cleared the entire game... You'll need a ladder, andyou'll need a flashlight. Hope to god grumpus doesn't find you. Good luck!");
-
+       
+      messages.push("It's your thirteenth birthday, and by the rules of the village you must   undergo several screenings before you're allowed to join society as an    adult. You've already aced the written and verbal screenings. There's justthe small matter of the game screening. A man yells at you: Come back whenyou've cleared the entire game... You'll need a ladder, and you'll need a flashlight. Hope to god Grumpus doesn't find you. Good luck!");
+      messages.push("Welcome to Rougish. Press space or enter to continue. H for help.");
       refresh();
 
     }
@@ -878,7 +878,7 @@ function checkKey(e) {
     return;
   }
 
-  if (blocked_on_message == true && e.keyCode == '13')
+  if (blocked_on_message == true && (e.keyCode == '13' || e.keyCode == '32'))
   {
     blocked_on_message = false;
   } else if (blocked_on_message == true) {
